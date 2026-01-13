@@ -49,6 +49,13 @@ st.markdown("""
         letter-spacing: -0.01em;
     }
 
+    [data-testid="stAppViewContainer"] {
+        background: radial-gradient(900px 500px at 12% -20%, rgba(110, 193, 228, 0.16), transparent 65%),
+                    radial-gradient(800px 500px at 92% -18%, rgba(97, 206, 112, 0.12), transparent 60%),
+                    var(--bg-0);
+        color: var(--text-0);
+    }
+
     h1, h2, h3, h4, h5, h6, .main-header {
         font-family: "Luxurious Roman", "Cormorant Garamond", "Times New Roman", serif;
         letter-spacing: 0.01em;
@@ -134,6 +141,23 @@ st.markdown("""
     section[data-testid="stSidebar"] {
         background: #f7f7f8;
         border-right: 1px solid var(--line-0);
+    }
+
+    section[data-testid="stSidebar"] * {
+        color: var(--text-0) !important;
+    }
+
+    section[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+        color: var(--text-0);
+    }
+
+    section[data-testid="stSidebar"] .stRadio label {
+        font-weight: 500;
+        color: var(--text-0) !important;
+    }
+
+    section[data-testid="stSidebar"] .stCaption {
+        color: var(--text-1) !important;
     }
 </style>
 """, unsafe_allow_html=True)
