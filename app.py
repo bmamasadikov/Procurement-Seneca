@@ -28,11 +28,11 @@ st.markdown("""
     @import url('https://fonts.googleapis.com/css2?family=Luxurious+Roman&family=Montserrat:wght@300;400;500;600&display=swap');
 
     :root {
-        --bg-0: #f6f6f6;
+        --bg-0: #f1f2f4;
         --bg-1: #ffffff;
-        --text-0: #161519;
-        --text-1: #7a7a7a;
-        --line-0: rgba(150, 144, 162, 0.2);
+        --text-0: #0b0b0d;
+        --text-1: #3f3f46;
+        --line-0: rgba(0, 0, 0, 0.08);
         --accent-0: #6EC1E4;
         --accent-1: #61CE70;
         --card-shadow: 0 18px 40px rgba(22, 21, 25, 0.08);
@@ -43,16 +43,12 @@ st.markdown("""
     html, body, [class*="css"]  {
         font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
         color: var(--text-0);
-        background: radial-gradient(900px 500px at 12% -20%, rgba(110, 193, 228, 0.16), transparent 65%),
-                    radial-gradient(800px 500px at 92% -18%, rgba(97, 206, 112, 0.12), transparent 60%),
-                    var(--bg-0);
+        background: var(--bg-0);
         letter-spacing: -0.01em;
     }
 
     [data-testid="stAppViewContainer"] {
-        background: radial-gradient(900px 500px at 12% -20%, rgba(110, 193, 228, 0.16), transparent 65%),
-                    radial-gradient(800px 500px at 92% -18%, rgba(97, 206, 112, 0.12), transparent 60%),
-                    var(--bg-0);
+        background: var(--bg-0);
         color: var(--text-0);
     }
 
