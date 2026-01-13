@@ -59,245 +59,9 @@ if 'current_project_id' not in st.session_state:
 if 'view_mode' not in st.session_state:
     st.session_state.view_mode = 'new_project'
 
-# Title
-st.markdown('<div class="main-header">🏨 Hotel Procurement Calculator</div>', unsafe_allow_html=True)
-st.markdown("### Automated FF&E and OS&E Calculation System")
-
-# Sidebar
-with st.sidebar:
-    st.image("https://via.placeholder.com/150x80/1f77b4/ffffff?text=Hotel+Logo", width=150)
-    st.markdown("---")
-
-    # View mode selector
-    st.markdown("### 📁 Menu")
-    view_mode = st.radio(
-        "Select View",
-        ["New Project", "Project History", "Checklist", "Comparison"],
-        key="view_mode_radio"
-    )
-
-    if view_mode == "New Project":
-        st.session_state.view_mode = 'new_project'
-    elif view_mode == "Project History":
-        st.session_state.view_mode = 'history'
-    elif view_mode == "Checklist":
-        st.session_state.view_mode = 'checklist'
-    elif view_mode == "Comparison":
-        st.session_state.view_mode = 'comparison'
-
-    st.markdown("---")
-    st.markdown("### Quick Guide")
-    st.info("""
-    1. Enter hotel details
-    2. Configure room types
-    3. Add facilities
-    4. Click Calculate & Save
-    5. Track procurement status
-    6. Download reports
-    """)
-
-    st.markdown("---")
-    st.markdown("### About")
-    st.caption("Version 2.0")
-    st.caption("Procurement Management System")
-
-# Main form
-tab1, tab2, tab3, tab4 = st.tabs(["📋 Basic Info", "🛏️ Room Configuration", "🏊 Facilities", "📊 Results"])
-
-with tab1:
-    st.markdown('<div class="section-header">Hotel Information</div>', unsafe_allow_html=True)
-
-    # Detailed hotel identification
-    st.markdown("#### Project Identification")
-    col1, col2, col3 = st.columns(3)
-
-    with col1:
-        hotel_brand = st.selectbox(
-            "Hotel Brand *",
-            BrandStandards.get_available_brands()
-        )
-        project_name = st.text_input(
-            "Project Name *",
-            placeholder="e.g., Grand Opening 2024",
-            help="Internal project identifier"
-        )
-
-    with col2:
-        property_name = st.text_input(
-            "Property Name *",
-            placeholder="e.g., Hilton Garden Inn Downtown",
-            help="Official hotel name"
-        )
-        city = st.text_input("City *", placeholder="e.g., New York")
-
-    with col3:
-        country = st.text_input("Country *", placeholder="e.g., USA")
-        developer = st.text_input(
-            "Developer/Owner",
-            placeholder="e.g., ABC Hospitality Group"
-        )
-
-    # Combine for display name
-    hotel_name = f"{hotel_brand} - {property_name}, {city}"
-
-    st.markdown("---")
-
-    st.markdown("#### Property Configuration")
-    col1, col2 = st.columns(2)
-
-    with col1:
-        total_rooms = st.number_input("Total Number of Rooms *", min_value=1, max_value=1000, value=50)
-        num_floors = st.number_input("Number of Floors", min_value=1, max_value=100, value=5)
-
-    with col2:
-        num_restaurants = st.number_input("Number of Restaurants/Outlets", min_value=0, max_value=20, value=1)
-        num_kitchens = st.number_input("Number of Kitchens", min_value=0, max_value=10, value=1)
-
-with tab2:
-    st.markdown('<div class="section-header">Room Type Configuration</div>', unsafe_allow_html=True)
-
-    st.info("Define your room categories. The system will calculate all FF&E and OS&E items based on these.")
-
-    # Room types configuration
-    num_room_types = st.number_input("How many room types?", min_value=1, max_value=10, value=3)
-
-    room_types = []
-    total_configured_rooms = 0
-
-    for i in range(num_room_types):
-        st.markdown(f"#### Room Type {i+1}")
-        col1, col2, col3, col4 = st.columns(4)
-
-        with col1:
-            room_name = st.text_input(f"Room Type Name", value=f"Standard" if i==0 else f"Type {i+1}", key=f"room_name_{i}")
-        with col2:
-            room_count = st.number_input(f"Number of Rooms", min_value=0, max_value=1000, value=25 if i==0 else 0, key=f"room_count_{i}")
-        with col3:
-            bed_type = st.selectbox(f"Bed Configuration", ["King", "Twin", "Queen", "Double Twin"], key=f"bed_type_{i}")
-        with col4:
-            num_beds = st.number_input(f"Beds per Room", min_value=1, max_value=5, value=2 if bed_type=="Twin" else 1, key=f"num_beds_{i}")
-
-        if room_count > 0:
-            room_types.append({
-                "name": room_name,
-                "count": room_count,
-                "bed_type": bed_type,
-                "num_beds": num_beds
-            })
-            total_configured_rooms += room_count
-
-    # Validation
-    if total_configured_rooms != total_rooms:
-        st.warning(f"⚠️ Room count mismatch: Configured {total_configured_rooms} rooms, but total is {total_rooms}")
-    else:
-        st.success(f"✅ All {total_rooms} rooms configured correctly")
-
-with tab3:
-    st.markdown('<div class="section-header">Facilities & Amenities</div>', unsafe_allow_html=True)
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown("#### Wellness & Recreation")
-        has_spa = st.checkbox("Spa Facility")
-        if has_spa:
-            spa_rooms = st.number_input("Number of Treatment Rooms", min_value=1, max_value=50, value=4)
-        else:
-            spa_rooms = 0
-
-        has_pool = st.checkbox("Swimming Pool")
-        if has_pool:
-            pool_type = st.selectbox("Pool Type", ["Indoor", "Outdoor", "Both"])
-        else:
-            pool_type = "None"
-
-        has_gym = st.checkbox("Gym/Fitness Center", value=True)
-
-    with col2:
-        st.markdown("#### Business & Events")
-        has_conference = st.checkbox("Conference Rooms")
-        if has_conference:
-            num_conference = st.number_input("Number of Conference Rooms", min_value=1, max_value=20, value=2)
-        else:
-            num_conference = 0
-
-        has_business_center = st.checkbox("Business Center", value=True)
-
-    st.markdown("#### Linen Standards")
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        linen_standard = st.selectbox("Linen Quality Standard", ["Economy", "Standard", "Premium", "Luxury"])
-    with col2:
-        par_level = st.number_input("Par Level (sets per bed)", min_value=2, max_value=10, value=4,
-                                     help="How many complete sets of linen per bed (for rotation)")
-    with col3:
-        reserve_stock = st.slider("Reserve Stock %", min_value=0, max_value=50, value=10,
-                                  help="Additional backup inventory percentage")
-
-with tab4:
-    st.markdown('<div class="section-header">Calculation Results</div>', unsafe_allow_html=True)
-
-    # Calculate and Save button
-    col1, col2 = st.columns([3, 1])
-    with col1:
-        calculate_btn = st.button("🔄 Calculate & Save Project", type="primary", use_container_width=True)
-    with col2:
-        preview_btn = st.button("👁️ Preview Only", use_container_width=True)
-
-    if calculate_btn or preview_btn:
-        if not property_name or not city or not project_name:
-            st.error("Please fill in all required fields in Basic Info tab (marked with *)")
-        elif total_configured_rooms != total_rooms:
-            st.error("Please configure all rooms in Room Configuration tab")
-        else:
-            with st.spinner("Calculating procurement requirements..."):
-                st.session_state.calculation_done = True
-
-                # Generate calculations using the new calculator
-                config = {
-                    'hotel_name': hotel_name,
-                    'hotel_brand': hotel_brand,
-                    'property_name': property_name,
-                    'city': city,
-                    'country': country,
-                    'project_name': project_name,
-                    'developer': developer,
-                    'room_types': room_types,
-                    'total_rooms': total_rooms,
-                    'num_floors': num_floors,
-                    'par_level': par_level,
-                    'reserve_stock': reserve_stock,
-                    'has_spa': has_spa,
-                    'spa_rooms': spa_rooms,
-                    'has_pool': has_pool,
-                    'pool_type': pool_type,
-                    'has_gym': has_gym,
-                    'num_restaurants': num_restaurants,
-                    'num_kitchens': num_kitchens,
-                    'num_conference': num_conference,
-                    'linen_standard': linen_standard,
-                    'has_business_center': has_business_center
-                }
-
-                calculator = ProcurementCalculator(config)
-                results = calculator.calculate_all()
-                st.session_state.results = results
-
-                # Save to database if Calculate & Save was clicked
-                if calculate_btn:
-                    project_id = db.save_project(config, results)
-                    st.session_state.current_project_id = project_id
-                    st.success(f"✅ Project saved successfully! ID: {project_id}")
-                else:
-                    st.info("📋 Preview mode - Project not saved")
-
-                st.rerun()
-
-    # Display results if calculated
-    if st.session_state.calculation_done:
-        display_results()
-
-# Old function removed - now using ProcurementCalculator from calculator.py
+# ============================================================================
+# FUNCTION DEFINITIONS
+# ============================================================================
 
 def display_results():
     """Display calculation results"""
@@ -900,6 +664,248 @@ def print_by_department(project_id):
         file_name=f"{project['hotel_info']['property_name']}_by_department.xlsx",
         mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
     )
+
+# ============================================================================
+# MAIN APPLICATION UI
+# ============================================================================
+
+# Title
+st.markdown('<div class="main-header">🏨 Hotel Procurement Calculator</div>', unsafe_allow_html=True)
+st.markdown("### Automated FF&E and OS&E Calculation System")
+
+# Sidebar
+with st.sidebar:
+    st.image("https://via.placeholder.com/150x80/1f77b4/ffffff?text=Hotel+Logo", width=150)
+    st.markdown("---")
+
+    # View mode selector
+    st.markdown("### 📁 Menu")
+    view_mode = st.radio(
+        "Select View",
+        ["New Project", "Project History", "Checklist", "Comparison"],
+        key="view_mode_radio"
+    )
+
+    if view_mode == "New Project":
+        st.session_state.view_mode = 'new_project'
+    elif view_mode == "Project History":
+        st.session_state.view_mode = 'history'
+    elif view_mode == "Checklist":
+        st.session_state.view_mode = 'checklist'
+    elif view_mode == "Comparison":
+        st.session_state.view_mode = 'comparison'
+
+    st.markdown("---")
+    st.markdown("### Quick Guide")
+    st.info("""
+    1. Enter hotel details
+    2. Configure room types
+    3. Add facilities
+    4. Click Calculate & Save
+    5. Track procurement status
+    6. Download reports
+    """)
+
+    st.markdown("---")
+    st.markdown("### About")
+    st.caption("Version 2.0")
+    st.caption("Procurement Management System")
+
+# Main form
+tab1, tab2, tab3, tab4 = st.tabs(["📋 Basic Info", "🛏️ Room Configuration", "🏊 Facilities", "📊 Results"])
+
+with tab1:
+    st.markdown('<div class="section-header">Hotel Information</div>', unsafe_allow_html=True)
+
+    # Detailed hotel identification
+    st.markdown("#### Project Identification")
+    col1, col2, col3 = st.columns(3)
+
+    with col1:
+        hotel_brand = st.selectbox(
+            "Hotel Brand *",
+            BrandStandards.get_available_brands()
+        )
+        project_name = st.text_input(
+            "Project Name *",
+            placeholder="e.g., Grand Opening 2024",
+            help="Internal project identifier"
+        )
+
+    with col2:
+        property_name = st.text_input(
+            "Property Name *",
+            placeholder="e.g., Hilton Garden Inn Downtown",
+            help="Official hotel name"
+        )
+        city = st.text_input("City *", placeholder="e.g., New York")
+
+    with col3:
+        country = st.text_input("Country *", placeholder="e.g., USA")
+        developer = st.text_input(
+            "Developer/Owner",
+            placeholder="e.g., ABC Hospitality Group"
+        )
+
+    # Combine for display name
+    hotel_name = f"{hotel_brand} - {property_name}, {city}"
+
+    st.markdown("---")
+
+    st.markdown("#### Property Configuration")
+    col1, col2 = st.columns(2)
+
+    with col1:
+        total_rooms = st.number_input("Total Number of Rooms *", min_value=1, max_value=1000, value=50)
+        num_floors = st.number_input("Number of Floors", min_value=1, max_value=100, value=5)
+
+    with col2:
+        num_restaurants = st.number_input("Number of Restaurants/Outlets", min_value=0, max_value=20, value=1)
+        num_kitchens = st.number_input("Number of Kitchens", min_value=0, max_value=10, value=1)
+
+with tab2:
+    st.markdown('<div class="section-header">Room Type Configuration</div>', unsafe_allow_html=True)
+
+    st.info("Define your room categories. The system will calculate all FF&E and OS&E items based on these.")
+
+    # Room types configuration
+    num_room_types = st.number_input("How many room types?", min_value=1, max_value=10, value=3)
+
+    room_types = []
+    total_configured_rooms = 0
+
+    for i in range(num_room_types):
+        st.markdown(f"#### Room Type {i+1}")
+        col1, col2, col3, col4 = st.columns(4)
+
+        with col1:
+            room_name = st.text_input(f"Room Type Name", value=f"Standard" if i==0 else f"Type {i+1}", key=f"room_name_{i}")
+        with col2:
+            room_count = st.number_input(f"Number of Rooms", min_value=0, max_value=1000, value=25 if i==0 else 0, key=f"room_count_{i}")
+        with col3:
+            bed_type = st.selectbox(f"Bed Configuration", ["King", "Twin", "Queen", "Double Twin"], key=f"bed_type_{i}")
+        with col4:
+            num_beds = st.number_input(f"Beds per Room", min_value=1, max_value=5, value=2 if bed_type=="Twin" else 1, key=f"num_beds_{i}")
+
+        if room_count > 0:
+            room_types.append({
+                "name": room_name,
+                "count": room_count,
+                "bed_type": bed_type,
+                "num_beds": num_beds
+            })
+            total_configured_rooms += room_count
+
+    # Validation
+    if total_configured_rooms != total_rooms:
+        st.warning(f"⚠️ Room count mismatch: Configured {total_configured_rooms} rooms, but total is {total_rooms}")
+    else:
+        st.success(f"✅ All {total_rooms} rooms configured correctly")
+
+with tab3:
+    st.markdown('<div class="section-header">Facilities & Amenities</div>', unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("#### Wellness & Recreation")
+        has_spa = st.checkbox("Spa Facility")
+        if has_spa:
+            spa_rooms = st.number_input("Number of Treatment Rooms", min_value=1, max_value=50, value=4)
+        else:
+            spa_rooms = 0
+
+        has_pool = st.checkbox("Swimming Pool")
+        if has_pool:
+            pool_type = st.selectbox("Pool Type", ["Indoor", "Outdoor", "Both"])
+        else:
+            pool_type = "None"
+
+        has_gym = st.checkbox("Gym/Fitness Center", value=True)
+
+    with col2:
+        st.markdown("#### Business & Events")
+        has_conference = st.checkbox("Conference Rooms")
+        if has_conference:
+            num_conference = st.number_input("Number of Conference Rooms", min_value=1, max_value=20, value=2)
+        else:
+            num_conference = 0
+
+        has_business_center = st.checkbox("Business Center", value=True)
+
+    st.markdown("#### Linen Standards")
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        linen_standard = st.selectbox("Linen Quality Standard", ["Economy", "Standard", "Premium", "Luxury"])
+    with col2:
+        par_level = st.number_input("Par Level (sets per bed)", min_value=2, max_value=10, value=4,
+                                     help="How many complete sets of linen per bed (for rotation)")
+    with col3:
+        reserve_stock = st.slider("Reserve Stock %", min_value=0, max_value=50, value=10,
+                                  help="Additional backup inventory percentage")
+
+with tab4:
+    st.markdown('<div class="section-header">Calculation Results</div>', unsafe_allow_html=True)
+
+    # Calculate and Save button
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        calculate_btn = st.button("🔄 Calculate & Save Project", type="primary", use_container_width=True)
+    with col2:
+        preview_btn = st.button("👁️ Preview Only", use_container_width=True)
+
+    if calculate_btn or preview_btn:
+        if not property_name or not city or not project_name:
+            st.error("Please fill in all required fields in Basic Info tab (marked with *)")
+        elif total_configured_rooms != total_rooms:
+            st.error("Please configure all rooms in Room Configuration tab")
+        else:
+            with st.spinner("Calculating procurement requirements..."):
+                st.session_state.calculation_done = True
+
+                # Generate calculations using the new calculator
+                config = {
+                    'hotel_name': hotel_name,
+                    'hotel_brand': hotel_brand,
+                    'property_name': property_name,
+                    'city': city,
+                    'country': country,
+                    'project_name': project_name,
+                    'developer': developer,
+                    'room_types': room_types,
+                    'total_rooms': total_rooms,
+                    'num_floors': num_floors,
+                    'par_level': par_level,
+                    'reserve_stock': reserve_stock,
+                    'has_spa': has_spa,
+                    'spa_rooms': spa_rooms,
+                    'has_pool': has_pool,
+                    'pool_type': pool_type,
+                    'has_gym': has_gym,
+                    'num_restaurants': num_restaurants,
+                    'num_kitchens': num_kitchens,
+                    'num_conference': num_conference,
+                    'linen_standard': linen_standard,
+                    'has_business_center': has_business_center
+                }
+
+                calculator = ProcurementCalculator(config)
+                results = calculator.calculate_all()
+                st.session_state.results = results
+
+                # Save to database if Calculate & Save was clicked
+                if calculate_btn:
+                    project_id = db.save_project(config, results)
+                    st.session_state.current_project_id = project_id
+                    st.success(f"✅ Project saved successfully! ID: {project_id}")
+                else:
+                    st.info("📋 Preview mode - Project not saved")
+
+                st.rerun()
+
+    # Display results if calculated
+    if st.session_state.calculation_done:
+        display_results()
 
 # Additional Views based on mode
 if st.session_state.view_mode == 'history':
