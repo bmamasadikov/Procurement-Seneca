@@ -15,6 +15,8 @@ class ProcurementDatabase:
         self.db_path = db_path
         self.projects_file = os.path.join(db_path, 'projects.json')
         self.items_file = os.path.join(db_path, 'procurement_items.json')
+        self.suppliers_file = os.path.join(db_path, 'suppliers.json')
+        self.catalogs_file = os.path.join(db_path, 'supplier_catalogs.json')
         self._ensure_db_exists()
 
     def _ensure_db_exists(self):
@@ -27,6 +29,12 @@ class ProcurementDatabase:
 
         if not os.path.exists(self.items_file):
             self._write_json(self.items_file, {})
+
+        if not os.path.exists(self.suppliers_file):
+            self._write_json(self.suppliers_file, {})
+
+        if not os.path.exists(self.catalogs_file):
+            self._write_json(self.catalogs_file, {})
 
     def _read_json(self, file_path):
         """Read JSON file"""
@@ -104,6 +112,19 @@ class ProcurementDatabase:
                         'category': category,
                         'department': self._get_department(category),
                         'item_data': item,
+                        # CAPEX Management
+                        'capex_info': {
+                            'expense_type': self._get_expense_type(category),  # FF&E, OS&E, or OPEX
+                            'depreciation_years': self._get_depreciation_years(category),
+                            'budget_code': f"{self._get_budget_code(category)}-{item.get('Item', 'ITEM')[:10].upper().replace(' ', '-')}",
+                            'cost_center': self._get_department(category),
+                            'budget_amount': 0,  # To be set by user
+                            'actual_amount': 0,  # Calculated from unit_price * ordered_qty
+                            'variance': 0,  # budget_amount - actual_amount
+                            'approval_status': 'draft',  # draft, submitted, dept_approved, finance_approved, rejected
+                            'approved_by': [],  # List of approvers
+                            'approved_date': None
+                        },
                         'procurement_status': {
                             'ordered': False,
                             'ordered_date': None,
@@ -117,8 +138,19 @@ class ProcurementDatabase:
                             'po_number': '',
                             'unit_price': 0,
                             'total_price': 0,
-                            'notes': ''
-                        }
+                            'notes': '',
+                            # Installation specifications
+                            'installation_specs': {
+                                'height_cm': self._get_default_height(item.get('Item', '')),
+                                'distance_from_floor': '',
+                                'distance_from_fixture': '',
+                                'installation_notes': '',
+                                'installer_assigned': '',
+                                'installation_photo': ''
+                            }
+                        },
+                        # Audit Trail
+                        'audit_trail': []
                     }
                     project_items.append(item_record)
 
@@ -166,6 +198,89 @@ class ProcurementDatabase:
         """Get all items for a project"""
         items = self._read_json(self.items_file)
         return items.get(project_id, [])
+
+    def save_supplier(self, supplier_data: Dict) -> str:
+        """Create or update a supplier record"""
+        suppliers = self._read_json(self.suppliers_file)
+        supplier_id = supplier_data.get('supplier_id')
+
+        if not supplier_id:
+            supplier_id = datetime.now().strftime('SUP%Y%m%d_%H%M%S')
+
+        suppliers[supplier_id] = {
+            'supplier_id': supplier_id,
+            'name': supplier_data.get('name', ''),
+            'email': supplier_data.get('email', ''),
+            'phone': supplier_data.get('phone', ''),
+            'website': supplier_data.get('website', ''),
+            'address': supplier_data.get('address', ''),
+            'categories': supplier_data.get('categories', []),
+            'contact_person': supplier_data.get('contact_person', ''),
+            'notes': supplier_data.get('notes', ''),
+            'updated_at': datetime.now().isoformat(),
+            'created_at': supplier_data.get('created_at') or datetime.now().isoformat(),
+        }
+
+        self._write_json(self.suppliers_file, suppliers)
+        return supplier_id
+
+    def get_all_suppliers(self) -> List[Dict]:
+        """Return all suppliers"""
+        suppliers = self._read_json(self.suppliers_file)
+        return list(suppliers.values())
+
+    def get_supplier(self, supplier_id: str) -> Dict:
+        """Return a single supplier"""
+        suppliers = self._read_json(self.suppliers_file)
+        return suppliers.get(supplier_id, {})
+
+    def save_supplier_catalog(self, supplier_id: str, catalog_data: Dict, items: List[Dict]) -> str:
+        """Save a catalog upload for a supplier"""
+        catalogs = self._read_json(self.catalogs_file)
+        supplier_catalogs = catalogs.get(supplier_id, [])
+        catalog_id = datetime.now().strftime('CAT%Y%m%d_%H%M%S')
+
+        catalog_record = {
+            'catalog_id': catalog_id,
+            'supplier_id': supplier_id,
+            'name': catalog_data.get('name', 'Catalog'),
+            'source_type': catalog_data.get('source_type', ''),
+            'source_name': catalog_data.get('source_name', ''),
+            'source_url': catalog_data.get('source_url', ''),
+            'uploaded_at': datetime.now().isoformat(),
+            'image_dir': catalog_data.get('image_dir', ''),
+            'image_count': catalog_data.get('image_count', 0),
+            'items': items,
+        }
+
+        supplier_catalogs.append(catalog_record)
+        catalogs[supplier_id] = supplier_catalogs
+        self._write_json(self.catalogs_file, catalogs)
+        return catalog_id
+
+    def get_supplier_catalogs(self, supplier_id: str) -> List[Dict]:
+        """Return all catalogs for a supplier"""
+        catalogs = self._read_json(self.catalogs_file)
+        return catalogs.get(supplier_id, [])
+
+    def get_all_catalog_items(self, supplier_ids: List[str]) -> List[Dict]:
+        """Return all catalog items for selected suppliers"""
+        catalogs = self._read_json(self.catalogs_file)
+        all_items = []
+
+        for supplier_id in supplier_ids:
+            supplier_catalogs = catalogs.get(supplier_id, [])
+            for catalog in supplier_catalogs:
+                for item in catalog.get('items', []):
+                    enriched = {
+                        'supplier_id': supplier_id,
+                        'catalog_id': catalog.get('catalog_id'),
+                        'catalog_name': catalog.get('name', ''),
+                        **item
+                    }
+                    all_items.append(enriched)
+
+        return all_items
 
     def update_item_status(self, project_id: str, item_index: int, status_update: Dict):
         """Update procurement status of an item"""
@@ -315,6 +430,141 @@ class ProcurementDatabase:
         }
 
         return comparison
+
+    def _get_default_height(self, item_name: str) -> int:
+        """Get default installation height in cm based on item type (from WHITE STONE standards)"""
+        item_lower = item_name.lower()
+
+        # Installation heights from WHITE STONE archive
+        height_standards = {
+            'towel': 180,  # Towel shelf/bar: 180cm from floor
+            'hook': 180,  # Door hooks: 180cm from floor
+            'mirror': 130,  # Mirrors: 120-140cm from floor (using 130 as default)
+            'cosmetic': 125,  # Cosmetics shelf: 120-130cm from floor
+            'dispenser': 110,  # Sink dispenser: 100-120cm from floor
+            'hairdryer': 110,  # Hair dryer: 100-120cm from floor
+            'hand towel': 130,  # Hand towel holder: 120-140cm from floor
+            'toilet paper': 65,  # TP holder: 20cm from toilet (approx 65cm from floor)
+            'spare tp': 44,  # Spare TP: under main holder (approx 44cm from floor)
+            'toilet brush': 15,  # Toilet brush: 15cm from floor
+        }
+
+        for keyword, height in height_standards.items():
+            if keyword in item_lower:
+                return height
+
+        return 0  # No default height specified
+
+    def _get_expense_type(self, category: str) -> str:
+        """Determine if item is FF&E, OS&E, or OPEX"""
+        # FF&E: Furniture, Fixtures & Equipment (capitalized, depreciated over 7-10 years)
+        ffe_categories = ['furniture', 'guest_rooms', 'bathroom', 'conference',
+                         'restaurant', 'kitchen', 'spa', 'pool', 'gym']
+
+        # OS&E: Operating Supplies & Equipment (expensed immediately or short depreciation)
+        ose_categories = ['linen', 'amenities']
+
+        # OPEX: Operational Expenditure (ongoing costs, fully expensed)
+        opex_categories = ['back_of_house']  # Some back of house items
+
+        if category in ffe_categories:
+            return 'FF&E'
+        elif category in ose_categories:
+            return 'OS&E'
+        elif category in opex_categories:
+            return 'OPEX'
+        else:
+            return 'FF&E'  # Default to FF&E
+
+    def _get_depreciation_years(self, category: str) -> int:
+        """Get depreciation period in years"""
+        expense_type = self._get_expense_type(category)
+
+        if expense_type == 'FF&E':
+            return 7  # Standard FF&E depreciation
+        elif expense_type == 'OS&E':
+            return 1  # OS&E typically expensed in first year
+        else:  # OPEX
+            return 0  # Fully expensed immediately
+
+    def _get_budget_code(self, category: str) -> str:
+        """Generate budget code prefix for cost center tracking"""
+        codes = {
+            'guest_rooms': '4100-GR',
+            'linen': '4200-LN',
+            'bathroom': '4150-BA',
+            'furniture': '4100-FU',
+            'amenities': '4120-AM',
+            'restaurant': '5100-FB',
+            'kitchen': '5200-KT',
+            'spa': '6100-SP',
+            'pool': '6200-PL',
+            'gym': '6300-GY',
+            'public_areas': '4300-PA',
+            'conference': '4400-CF',
+            'back_of_house': '7100-BH'
+        }
+        return codes.get(category, '9999-XX')
+
+    def add_audit_entry(self, project_id: str, item_index: int, action: str, user: str, details: dict):
+        """Add audit trail entry for CAPEX tracking"""
+        items = self._read_json(self.items_file)
+
+        if project_id in items and item_index < len(items[project_id]):
+            audit_entry = {
+                'timestamp': datetime.now().isoformat(),
+                'action': action,  # e.g., 'created', 'approved', 'ordered', 'price_changed'
+                'user': user,
+                'details': details
+            }
+
+            if 'audit_trail' not in items[project_id][item_index]:
+                items[project_id][item_index]['audit_trail'] = []
+
+            items[project_id][item_index]['audit_trail'].append(audit_entry)
+            self._write_json(self.items_file, items)
+            return True
+        return False
+
+    def get_budget_summary(self, project_id: str) -> Dict:
+        """Get budget vs actual summary by department"""
+        items = self.get_project_items(project_id)
+
+        summary = {}
+        for item in items:
+            dept = item['department']
+            capex_info = item.get('capex_info', {})
+
+            if dept not in summary:
+                summary[dept] = {
+                    'budget_total': 0,
+                    'actual_total': 0,
+                    'variance': 0,
+                    'item_count': 0,
+                    'ffe_total': 0,
+                    'ose_total': 0,
+                    'opex_total': 0
+                }
+
+            summary[dept]['budget_total'] += capex_info.get('budget_amount', 0)
+            summary[dept]['actual_total'] += capex_info.get('actual_amount', 0)
+            summary[dept]['item_count'] += 1
+
+            expense_type = capex_info.get('expense_type', 'FF&E')
+            actual = capex_info.get('actual_amount', 0)
+
+            if expense_type == 'FF&E':
+                summary[dept]['ffe_total'] += actual
+            elif expense_type == 'OS&E':
+                summary[dept]['ose_total'] += actual
+            elif expense_type == 'OPEX':
+                summary[dept]['opex_total'] += actual
+
+        # Calculate variances
+        for dept in summary:
+            summary[dept]['variance'] = summary[dept]['budget_total'] - summary[dept]['actual_total']
+
+        return summary
 
     def delete_project(self, project_id: str) -> bool:
         """Delete a project"""
