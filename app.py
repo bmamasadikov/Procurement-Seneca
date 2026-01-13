@@ -25,41 +25,48 @@ st.set_page_config(
 # Custom CSS
 st.markdown("""
 <style>
+    @import url('https://fonts.googleapis.com/css2?family=Luxurious+Roman&family=Montserrat:wght@300;400;500;600&display=swap');
+
     :root {
-        --bg-0: #f6f7f9;
+        --bg-0: #f6f6f6;
         --bg-1: #ffffff;
-        --text-0: #111827;
-        --text-1: #4b5563;
-        --line-0: #e5e7eb;
-        --accent-0: #0a84ff;
-        --accent-1: #0f6ef2;
-        --card-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
-        --radius-0: 16px;
+        --text-0: #161519;
+        --text-1: #7a7a7a;
+        --line-0: rgba(150, 144, 162, 0.2);
+        --accent-0: #6EC1E4;
+        --accent-1: #61CE70;
+        --card-shadow: 0 18px 40px rgba(22, 21, 25, 0.08);
+        --radius-0: 18px;
         --radius-1: 12px;
     }
 
     html, body, [class*="css"]  {
-        font-family: "SF Pro Display", "SF Pro Text", "Helvetica Neue", "Avenir", Arial, sans-serif;
+        font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
         color: var(--text-0);
-        background: radial-gradient(1200px 600px at 20% -10%, #e9eef7 0%, transparent 60%),
-                    radial-gradient(1000px 500px at 90% -20%, #e8f2ff 0%, transparent 55%),
+        background: radial-gradient(900px 500px at 12% -20%, rgba(110, 193, 228, 0.16), transparent 65%),
+                    radial-gradient(800px 500px at 92% -18%, rgba(97, 206, 112, 0.12), transparent 60%),
                     var(--bg-0);
+        letter-spacing: -0.01em;
+    }
+
+    h1, h2, h3, h4, h5, h6, .main-header {
+        font-family: "Luxurious Roman", "Cormorant Garamond", "Times New Roman", serif;
+        letter-spacing: 0.01em;
     }
 
     .main-header {
-        font-size: 2.2rem;
-        font-weight: 700;
+        font-size: 2.4rem;
+        font-weight: 500;
         color: var(--text-0);
         text-align: center;
-        letter-spacing: -0.02em;
-        padding: 0.5rem 0 0.25rem 0;
+        padding: 0.4rem 0 0.25rem 0;
     }
     .section-header {
-        font-size: 1.3rem;
-        font-weight: 600;
+        font-size: 1.35rem;
+        font-weight: 500;
         color: var(--text-0);
-        margin-top: 1.75rem;
-        padding-bottom: 0.35rem;
+        margin-top: 1.8rem;
+        padding-bottom: 0.45rem;
         border-bottom: 1px solid var(--line-0);
     }
 
@@ -72,31 +79,31 @@ st.markdown("""
         background: var(--bg-1);
         border: 1px solid var(--line-0);
         border-radius: var(--radius-0);
-        padding: 0.3rem;
+        padding: 0.35rem;
         box-shadow: var(--card-shadow);
     }
     .stTabs [data-baseweb="tab"] {
         border-radius: var(--radius-1);
-        padding: 0.4rem 0.9rem;
-        font-weight: 600;
+        padding: 0.4rem 0.95rem;
+        font-weight: 500;
         color: var(--text-1);
     }
     .stTabs [aria-selected="true"] {
-        background: #eaf2ff;
+        background: rgba(110, 193, 228, 0.18);
         color: var(--text-0);
     }
 
     .stButton>button {
-        background: var(--accent-0);
+        background: var(--text-0);
         color: #ffffff;
         border: none;
-        border-radius: 10px;
+        border-radius: 999px;
         font-weight: 600;
-        padding: 0.6rem 1rem;
-        box-shadow: 0 10px 20px rgba(10, 132, 255, 0.2);
+        padding: 0.6rem 1.4rem;
+        box-shadow: 0 12px 30px rgba(22, 21, 25, 0.16);
     }
     .stButton>button:hover {
-        background: var(--accent-1);
+        background: #0f1014;
     }
 
     .stTextInput>div>div>input,
@@ -106,7 +113,7 @@ st.markdown("""
     .stFileUploader>div>div {
         background: var(--bg-1);
         border: 1px solid var(--line-0);
-        border-radius: 10px;
+        border-radius: 12px;
     }
 
     .stDataFrame, .stDataEditor {
@@ -120,12 +127,12 @@ st.markdown("""
         background: var(--bg-1);
         border: 1px solid var(--line-0);
         border-radius: var(--radius-1);
-        padding: 0.75rem 1rem;
+        padding: 0.9rem 1rem;
         box-shadow: var(--card-shadow);
     }
 
     section[data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #f8fafc 0%, #eef2f7 100%);
+        background: #f7f7f8;
         border-right: 1px solid var(--line-0);
     }
 </style>
