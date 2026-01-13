@@ -29,27 +29,36 @@ st.markdown("""
 
     :root {
         --bg-0: #f1f2f4;
-        --bg-1: #ffffff;
-        --text-0: #0b0b0d;
-        --text-1: #3f3f46;
-        --line-0: rgba(0, 0, 0, 0.08);
-        --accent-0: #6EC1E4;
-        --accent-1: #61CE70;
-        --card-shadow: 0 18px 40px rgba(22, 21, 25, 0.08);
-        --radius-0: 18px;
-        --radius-1: 12px;
+        --bg-1: #f1f2f4;
+        --bg-2: #ffffff;
+        --text-0: #000000;
+        --text-1: #000000;
+        --line-0: rgba(0, 0, 0, 0.12);
+        --accent-0: #d9d9d9;
+        --accent-1: #cfcfcf;
+        --card-shadow: 0 12px 30px rgba(0, 0, 0, 0.06);
+        --radius-0: 14px;
+        --radius-1: 10px;
     }
 
     html, body, [class*="css"]  {
         font-family: "Montserrat", "Helvetica Neue", Arial, sans-serif;
         color: var(--text-0);
-        background: var(--bg-0);
+        background: var(--bg-0) !important;
         letter-spacing: -0.01em;
     }
 
     [data-testid="stAppViewContainer"] {
-        background: var(--bg-0);
-        color: var(--text-0);
+        background: var(--bg-0) !important;
+        color: var(--text-0) !important;
+    }
+    [data-testid="stAppViewContainer"] > .main {
+        background: var(--bg-0) !important;
+    }
+
+    [data-testid="stHeader"], [data-testid="stToolbar"] {
+        background: var(--bg-0) !important;
+        color: var(--text-0) !important;
     }
 
     h1, h2, h3, h4, h5, h6, .main-header {
@@ -58,14 +67,14 @@ st.markdown("""
     }
 
     .main-header {
-        font-size: 2.4rem;
+        font-size: 2.2rem;
         font-weight: 500;
         color: var(--text-0);
         text-align: center;
         padding: 0.4rem 0 0.25rem 0;
     }
     .section-header {
-        font-size: 1.35rem;
+        font-size: 1.25rem;
         font-weight: 500;
         color: var(--text-0);
         margin-top: 1.8rem;
@@ -79,7 +88,7 @@ st.markdown("""
     }
 
     .stTabs [data-baseweb="tab-list"] {
-        background: var(--bg-1);
+        background: var(--bg-2);
         border: 1px solid var(--line-0);
         border-radius: var(--radius-0);
         padding: 0.35rem;
@@ -92,13 +101,13 @@ st.markdown("""
         color: var(--text-1);
     }
     .stTabs [aria-selected="true"] {
-        background: rgba(110, 193, 228, 0.18);
+        background: #e9eaec;
         color: var(--text-0);
     }
 
     .stButton>button {
-        background: var(--text-0);
-        color: #ffffff;
+        background: var(--accent-0);
+        color: var(--text-0);
         border: none;
         border-radius: 999px;
         font-weight: 600;
@@ -106,7 +115,7 @@ st.markdown("""
         box-shadow: 0 12px 30px rgba(22, 21, 25, 0.16);
     }
     .stButton>button:hover {
-        background: #0f1014;
+        background: var(--accent-1);
     }
 
     .stTextInput>div>div>input,
@@ -114,9 +123,10 @@ st.markdown("""
     .stSelectbox>div>div>div,
     .stTextArea>div>textarea,
     .stFileUploader>div>div {
-        background: var(--bg-1);
+        background: var(--bg-2);
         border: 1px solid var(--line-0);
         border-radius: 12px;
+        color: var(--text-0) !important;
     }
 
     .stDataFrame, .stDataEditor {
@@ -127,7 +137,7 @@ st.markdown("""
     }
 
     .stMetric {
-        background: var(--bg-1);
+        background: var(--bg-2);
         border: 1px solid var(--line-0);
         border-radius: var(--radius-1);
         padding: 0.9rem 1rem;
@@ -135,11 +145,15 @@ st.markdown("""
     }
 
     section[data-testid="stSidebar"] {
-        background: #f7f7f8;
+        background: var(--bg-0) !important;
         border-right: 1px solid var(--line-0);
     }
 
     section[data-testid="stSidebar"] * {
+        color: var(--text-0) !important;
+    }
+
+    label, p, span, small, input, textarea, select {
         color: var(--text-0) !important;
     }
 
