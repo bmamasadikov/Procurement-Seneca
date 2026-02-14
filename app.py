@@ -215,44 +215,50 @@ st.markdown("""
         color: #000000;
     }
     
-    /* Dropdown menu styling - white text */
+    /* Dropdown menu styling */
     [data-baseweb="popover"] {
-        background-color: #2c3e50 !important;
+        background-color: #F5F5DC !important;
     }
     
     [data-baseweb="menu"] {
-        background-color: #2c3e50 !important;
+        background-color: #F5F5DC !important;
+        border: 1px solid #000000 !important;
     }
     
     [data-baseweb="menu"] li {
-        color: #FFFFFF !important;
-        background-color: #2c3e50 !important;
+        color: #000000 !important;
+        background-color: #F5F5DC !important;
     }
     
     [data-baseweb="menu"] li:hover {
-        background-color: #1f77b4 !important;
-        color: #FFFFFF !important;
+        background-color: #E7E7CC !important;
+        color: #000000 !important;
+    }
+
+    [data-baseweb="menu"] li[aria-selected="true"] {
+        background-color: #DDDDBF !important;
+        color: #000000 !important;
     }
     
     [data-baseweb="menu"] button {
-        color: #FFFFFF !important;
-        background-color: #2c3e50 !important;
+        color: #000000 !important;
+        background-color: #F5F5DC !important;
     }
     
     /* Dropdown option styling */
     .st-ex {
-        background-color: #2c3e50 !important;
-        color: #FFFFFF !important;
+        background-color: #F5F5DC !important;
+        color: #000000 !important;
     }
     
     ul[data-testid="stSelectMultiOptions"] li {
-        color: #FFFFFF !important;
-        background-color: #2c3e50 !important;
+        color: #000000 !important;
+        background-color: #F5F5DC !important;
     }
     
     ul[data-testid="stSelectMultiOptions"] li:hover {
-        background-color: #1f77b4 !important;
-        color: #FFFFFF !important;
+        background-color: #E7E7CC !important;
+        color: #000000 !important;
     }
 </style>
 """, unsafe_allow_html=True)
