@@ -344,15 +344,6 @@ with st.sidebar:
         st.caption("Version 2.1 | Updated")
         st.caption("Procurement Management System")
         st.caption("with Supplier Portal")
-    else:
-        # Show collapsed menu hint
-        st.markdown("""
-        <div style='text-align: center; padding: 2rem 0; color: #000000;'>
-            <p style='font-size: 0.9rem;'>Click ☰ to expand menu</p>
-        </div>
-        """, unsafe_allow_html=True)
-
-
 # ============================================================================
 # CAPEX DASHBOARD - Avenue 1936 Hotel
 # ============================================================================
