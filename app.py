@@ -38,16 +38,25 @@ st.set_page_config(
 # Custom CSS
 st.markdown("""
 <style>
+    :root {
+        --background-color: #F5F5DC;
+        --secondary-background-color: #F5F5DC;
+        --text-color: #000000;
+    }
+
     * {
         color: #000000 !important;
     }
-    
-    body {
-        background-color: #F5F5DC;
-    }
-    
-    .stMainBlockContainer {
-        background-color: #F5F5DC;
+
+    html, body,
+    [data-testid="stAppViewContainer"],
+    [data-testid="stAppViewContainer"] > .main,
+    [data-testid="stMain"],
+    [data-testid="stMainBlockContainer"],
+    .stMain,
+    .stMainBlockContainer,
+    .block-container {
+        background-color: #F5F5DC !important;
     }
     
     /* Header styling */
@@ -113,6 +122,14 @@ st.markdown("""
     .stButton > button {
         color: #000000;
         background-color: #F5F5DC;
+    }
+
+    .stTabs [data-baseweb="tab-list"] {
+        background-color: #F5F5DC !important;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        color: #000000 !important;
     }
     
     .stSelectbox, .stTextInput, .stNumberInput {
