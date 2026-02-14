@@ -216,46 +216,49 @@ st.markdown("""
     }
     
     /* Dropdown menu styling */
-    [data-baseweb="popover"] {
+    [data-baseweb="popover"],
+    [data-baseweb="popover"] > div,
+    [data-baseweb="menu"],
+    [role="listbox"],
+    ul[role="listbox"] {
         background-color: #F5F5DC !important;
-    }
-    
-    [data-baseweb="menu"] {
-        background-color: #F5F5DC !important;
+        color: #000000 !important;
         border: 1px solid #000000 !important;
     }
     
-    [data-baseweb="menu"] li {
+    [data-baseweb="popover"] *,
+    [data-baseweb="menu"] *,
+    [role="listbox"] * {
         color: #000000 !important;
-        background-color: #F5F5DC !important;
     }
     
-    [data-baseweb="menu"] li:hover {
+    [data-baseweb="menu"] li,
+    [data-baseweb="menu"] ul,
+    [role="option"],
+    [role="listbox"] > div {
+        background-color: #F5F5DC !important;
+        color: #000000 !important;
+    }
+    
+    [data-baseweb="menu"] li:hover,
+    [role="option"]:hover {
         background-color: #E7E7CC !important;
         color: #000000 !important;
     }
-
-    [data-baseweb="menu"] li[aria-selected="true"] {
+    
+    [data-baseweb="menu"] li[aria-selected="true"],
+    [role="option"][aria-selected="true"] {
         background-color: #DDDDBF !important;
         color: #000000 !important;
     }
-    
-    [data-baseweb="menu"] button {
-        color: #000000 !important;
-        background-color: #F5F5DC !important;
-    }
-    
-    /* Dropdown option styling */
-    .st-ex {
-        background-color: #F5F5DC !important;
-        color: #000000 !important;
-    }
-    
+
+    [data-baseweb="menu"] button,
+    .st-ex,
     ul[data-testid="stSelectMultiOptions"] li {
         color: #000000 !important;
         background-color: #F5F5DC !important;
     }
-    
+
     ul[data-testid="stSelectMultiOptions"] li:hover {
         background-color: #E7E7CC !important;
         color: #000000 !important;
@@ -2535,6 +2538,5 @@ st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: #000000;'>
     <p>Hotel Procurement Calculator v2.1 | Built with Streamlit</p>
-    <p>Avenue 1936 CAPEX Management Module</p>
 </div>
 """, unsafe_allow_html=True)
