@@ -2,6 +2,7 @@
 Procurement calculation engine with industry standard multipliers
 """
 from typing import Dict, List, Any
+from conference_planning import build_conference_procurement_items, calculate_conference_room_plan
 from data_loader import BrandStandards
 
 
@@ -45,6 +46,7 @@ class ProcurementCalculator:
         return {
             'hotel_name': self.config.get('hotel_name', 'Unnamed Hotel'),
             'brand': self.brand,
+            'hotel_type': self.config.get('hotel_type', ''),
             'total_rooms': total_rooms,
             'total_beds': total_beds,
             'num_floors': self.config.get('num_floors', 0),
@@ -54,7 +56,12 @@ class ProcurementCalculator:
             'has_gym': self.config.get('has_gym', False),
             'num_restaurants': self.config.get('num_restaurants', 0),
             'num_kitchens': self.config.get('num_kitchens', 0),
-            'num_conference': self.config.get('num_conference', 0)
+            'num_conference': self.config.get('num_conference', 0),
+            'conference_capacity': sum(
+                int(room.get('final_procurement_occupancy', 0) or 0)
+                for room in self.config.get('conference_rooms', [])
+            ),
+            'num_back_of_house_areas': self.config.get('num_back_of_house_areas', 0),
         }
 
     def _calculate_guest_rooms(self) -> List[Dict]:
@@ -66,13 +73,15 @@ class ProcurementCalculator:
             room_count = room_type['count']
             num_beds = room_type['num_beds']
             bed_type = room_type['bed_type']
+            bed_size_config = room_type.get('bed_size', None)
             room_name = room_type['name']
+            bed_size = self._get_bed_size(bed_type, bed_size_config)
 
             # Bed bases
             items.append({
                 'Category': 'Beds',
                 'Item': f"Bed Base - {bed_type}",
-                'Specification': self._get_bed_size(bed_type),
+                'Specification': bed_size,
                 'Room Type': room_name,
                 'Qty per Room': num_beds,
                 'Room Count': room_count,
@@ -85,7 +94,7 @@ class ProcurementCalculator:
             items.append({
                 'Category': 'Mattresses',
                 'Item': f"Mattress - {bed_type}",
-                'Specification': self._get_bed_size(bed_type),
+                'Specification': bed_size,
                 'Room Type': room_name,
                 'Qty per Room': num_beds,
                 'Room Count': room_count,
@@ -98,7 +107,7 @@ class ProcurementCalculator:
             items.append({
                 'Category': 'Mattresses',
                 'Item': f"Mattress Protector - Waterproof",
-                'Specification': self._get_bed_size(bed_type),
+                'Specification': bed_size,
                 'Room Type': room_name,
                 'Qty per Room': num_beds,
                 'Room Count': room_count,
@@ -144,7 +153,8 @@ class ProcurementCalculator:
             num_beds = room_type['num_beds']
             room_name = room_type['name']
             bed_type = room_type['bed_type']
-            bed_size = self._get_bed_size(bed_type)
+            bed_size_config = room_type.get('bed_size', None)
+            bed_size = self._get_bed_size(bed_type, bed_size_config)
 
             # Calculate linen
             for item in linen_items:
@@ -191,7 +201,7 @@ class ProcurementCalculator:
         return items
 
     def _calculate_bathroom(self) -> List[Dict]:
-        """Calculate bathroom fixtures and accessories"""
+        """Calculate bathroom fixtures and accessories with multi-bathroom support"""
         items = []
         room_types = self.config.get('room_types', [])
 
@@ -208,17 +218,34 @@ class ProcurementCalculator:
             {'name': 'Hairdryer', 'qty': 1},
             {'name': 'Magnifying Mirror', 'qty': 1},
             {'name': 'Shower Curtain/Door', 'qty': 1},
+            # Additional items from WHITE STONE archive
+            {'name': 'Spare TP Holder', 'qty': 1},
+            {'name': 'Hand Towel Holder', 'qty': 1},
+            {'name': 'Door Hook', 'qty': 1},
+            {'name': 'Cosmetics Shelf', 'qty': 1},
+            {'name': 'Sink Dispenser', 'qty': 1},
+            {'name': 'Shower Dispenser', 'qty': 2},
+            {'name': 'Toilet Brush', 'qty': 1},
         ]
 
         for room_type in room_types:
+            # Get number of bathrooms per room (default to 1 if not specified)
+            num_bathrooms = room_type.get('num_bathrooms', 1)
+
             for item in bathroom_items:
+                # Calculate quantity per room based on number of bathrooms
+                qty_per_room = item['qty'] * num_bathrooms
+                total_qty = qty_per_room * room_type['count']
+
                 items.append({
                     'Category': 'Bathroom Fixtures',
                     'Item': item['name'],
                     'Room Type': room_type['name'],
-                    'Qty per Room': item['qty'],
+                    'Bathrooms per Room': num_bathrooms,
+                    'Qty per Bathroom': item['qty'],
+                    'Qty per Room': qty_per_room,
                     'Room Count': room_type['count'],
-                    'Total Qty': item['qty'] * room_type['count'],
+                    'Total Qty': total_qty,
                     'Unit': 'pcs'
                 })
 
@@ -303,7 +330,7 @@ class ProcurementCalculator:
     def _calculate_restaurant(self) -> List[Dict]:
         """Calculate restaurant F&B items"""
         items = []
-        num_restaurants = self.config.get('num_restaurants', 0)
+        num_restaurants = self.config.get('num_outlets', self.config.get('num_restaurants', 0))
 
         if num_restaurants == 0:
             return items
@@ -640,14 +667,17 @@ class ProcurementCalculator:
         return items
 
     def _calculate_conference(self) -> List[Dict]:
-        """Calculate conference room equipment"""
+        """Calculate conference room equipment from room-level planning data."""
+        conference_rooms = [calculate_conference_room_plan(room) for room in self.config.get('conference_rooms', [])]
+        if conference_rooms:
+            return build_conference_procurement_items(conference_rooms)
+
         items = []
         num_conference = self.config.get('num_conference', 0)
-
         if num_conference == 0:
             return items
 
-        # Per conference room
+        # Backward-compatible fallback for older saved projects without room-level plans.
         conference_items = [
             {'name': 'Conference Table (10-person)', 'qty': 1},
             {'name': 'Conference Chair', 'qty': 12},
@@ -674,24 +704,58 @@ class ProcurementCalculator:
         return items
 
     def _calculate_back_of_house(self) -> List[Dict]:
-        """Calculate back of house equipment"""
+        """Calculate back of house equipment with industry standards"""
         items = []
 
         total_rooms = self.config.get('total_rooms', 50)
+        num_back_of_house_areas = max(int(self.config.get('num_back_of_house_areas', 0) or 0), 0)
 
         # Office furniture - scales with hotel size
         staff_count = int(total_rooms * 0.5)  # Rough estimate
 
+        # Operational Support Equipment (from Hilton/Radisson standards)
+        import math
+
+        # Luggage trolleys: 1 per 50 rooms + 1 spare (minimum 3)
+        luggage_trolleys = max(3, math.ceil(total_rooms / 50) + 1)
+
+        # Housekeeping trolleys: 1 per 13-15 rooms (using 14 as standard)
+        housekeeping_trolleys = max(2, math.ceil(total_rooms / 14))
+
+        # Laundry carts: 1 per 20 rooms
+        laundry_carts = max(3, math.ceil(total_rooms / 20))
+
+        # Vacuum cleaners: 1 per 15 rooms (for housekeeping)
+        vacuum_cleaners = max(2, math.ceil(total_rooms / 15))
+
+        # Floor polishers: 1 per 50 rooms (minimum 2)
+        floor_polishers = max(2, math.ceil(total_rooms / 50))
+
+        office_desks = max(staff_count // 2, num_back_of_house_areas * 2) if num_back_of_house_areas else staff_count // 2
+        office_chairs = office_desks
+        filing_cabinets = max(5, total_rooms // 20, num_back_of_house_areas)
+
         boh_items = [
-            {'name': 'Office Desk', 'qty': staff_count // 2},
-            {'name': 'Office Chair', 'qty': staff_count // 2},
-            {'name': 'Filing Cabinet', 'qty': 5},
-            {'name': 'Staff Locker', 'qty': staff_count},
-            {'name': 'Staff Uniform', 'qty': staff_count * 3},
-            {'name': 'Housekeeping Cart', 'qty': total_rooms // 10},
-            {'name': 'Vacuum Cleaner', 'qty': total_rooms // 15},
-            {'name': 'Floor Polisher', 'qty': 2},
-            {'name': 'Laundry Basket', 'qty': total_rooms // 5},
+            # Operational Support Equipment
+            {'name': 'Luggage Trolley', 'qty': luggage_trolleys, 'standard': '1 per 50 rooms + spare'},
+            {'name': 'Housekeeping Trolley', 'qty': housekeeping_trolleys, 'standard': '1 per 14 rooms'},
+            {'name': 'Laundry Cart', 'qty': laundry_carts, 'standard': '1 per 20 rooms'},
+            {'name': 'Vacuum Cleaner', 'qty': vacuum_cleaners, 'standard': '1 per 15 rooms'},
+            {'name': 'Floor Polisher', 'qty': floor_polishers, 'standard': '1 per 50 rooms'},
+
+            # Office Equipment
+            {'name': 'Office Desk', 'qty': office_desks, 'standard': 'Per staff / BOH area support'},
+            {'name': 'Office Chair', 'qty': office_chairs, 'standard': 'Per staff / BOH area support'},
+            {'name': 'Filing Cabinet', 'qty': filing_cabinets, 'standard': 'Per department / BOH area'},
+
+            # Staff Areas
+            {'name': 'Staff Locker', 'qty': staff_count, 'standard': '1 per staff'},
+            {'name': 'Staff Uniform Set', 'qty': staff_count * 3, 'standard': '3 sets per staff'},
+
+            # Cleaning Equipment
+            {'name': 'Mop Bucket with Wringer', 'qty': math.ceil(total_rooms / 25), 'standard': '1 per 25 rooms'},
+            {'name': 'Pressure Washer', 'qty': 2, 'standard': 'Fixed'},
+            {'name': 'Carpet Cleaner', 'qty': max(1, total_rooms // 100), 'standard': '1 per 100 rooms'},
         ]
 
         for item in boh_items:
@@ -700,17 +764,22 @@ class ProcurementCalculator:
                 'Item': item['name'],
                 'Total Qty': item['qty'],
                 'Unit': 'pcs',
-                'Notes': ''
+                'Notes': item['standard']
             })
 
         return items
 
-    def _get_bed_size(self, bed_type: str) -> str:
-        """Get bed size based on type"""
+    def _get_bed_size(self, bed_type: str, bed_size_config: str = None) -> str:
+        """Get bed size based on type and configuration"""
+        # If bed size config is provided, use it
+        if bed_size_config:
+            return bed_size_config
+        
+        # Fallback to default sizes
         sizes = {
-            'King': '180x200 cm',
+            'King': '200x200 cm',
             'Queen': '160x200 cm',
-            'Twin': '100x200 cm (each)',
+            'Twin': '100x200 cm (Zip & Link)',
             'Double Twin': '100x200 cm (each)',
             'Single': '100x200 cm'
         }
