@@ -1,0 +1,70 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sentask}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env.public}
+    volumes:
+      - sentask_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-sentask}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sentask}
+      NEXTAUTH_URL: ${NEXTAUTH_URL:?set NEXTAUTH_URL in .env.public}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:?set NEXTAUTH_SECRET in .env.public}
+      APP_URL: ${APP_URL:?set APP_URL in .env.public}
+      APP_NAME: ${APP_NAME:-SENTASK}
+      COMPANY_NAME: ${COMPANY_NAME:-Seneca}
+      AUTH_TRUST_HOST: "true"
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-SENTASK <noreply@example.com>}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_WORKSPACE_ALLOWED_DOMAINS: ${GOOGLE_WORKSPACE_ALLOWED_DOMAINS:-seneca.uz}
+      GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL: ${GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL:-}
+      GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: ${GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:-}
+      GOOGLE_WORKSPACE_DELEGATED_ADMIN_EMAIL: ${GOOGLE_WORKSPACE_DELEGATED_ADMIN_EMAIL:-}
+      GOOGLE_WORKSPACE_CALENDAR_IMPERSONATION_EMAIL: ${GOOGLE_WORKSPACE_CALENDAR_IMPERSONATION_EMAIL:-}
+      GOOGLE_WORKSPACE_DEFAULT_SENDER_EMAIL: ${GOOGLE_WORKSPACE_DEFAULT_SENDER_EMAIL:-}
+      CRON_SECRET: ${CRON_SECRET:-}
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    depends_on:
+      - app
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env.public}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env.public}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  sentask_postgres_data:
+  caddy_data:
+  caddy_config:

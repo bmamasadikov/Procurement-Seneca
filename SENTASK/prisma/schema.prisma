@@ -1,0 +1,447 @@
+// SENTASK — Seneca Internal Task Manager
+// Google Workspace-integrated schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ───────────────────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  MANAGER
+  STAFF
+  PENDING   // Google first-login, awaiting admin approval
+}
+
+enum AuthProvider {
+  CREDENTIALS
+  GOOGLE
+}
+
+enum TaskStatus {
+  BACKLOG
+  TODO
+  IN_PROGRESS
+  WAITING
+  DONE
+}
+
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum RepeatType {
+  NONE
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum NotificationType {
+  TASK_ASSIGNED
+  TASK_UPDATED
+  TASK_STATUS_CHANGED
+  TASK_COMPLETED
+  TASK_OVERDUE
+  TASK_DUE_SOON
+  COMMENT_ADDED
+  MENTIONED
+  RECURRING_REMINDER
+}
+
+enum NotificationChannel {
+  IN_APP
+  EMAIL
+  TELEGRAM
+}
+
+enum NotificationProvider {
+  IN_APP
+  SMTP
+  GMAIL_API
+  TELEGRAM_BOT
+}
+
+enum NotificationStatus {
+  PENDING
+  SENT
+  FAILED
+  SKIPPED
+}
+
+enum CalendarSyncStatus {
+  NONE       // no calendar event created
+  SYNCED     // successfully synced
+  FAILED     // last sync attempt failed
+  OUTDATED   // task changed, needs re-sync
+}
+
+// ─── Models ──────────────────────────────────────────────────────────────────
+
+model Department {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  color       String   @default("#1e3a8a")
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  users User[]
+  tasks Task[]
+
+  @@map("departments")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  name         String
+  email        String       @unique
+  googleEmail  String?      @unique
+  passwordHash String?      // nullable — Google-only users have no password
+  authProvider AuthProvider @default(CREDENTIALS)
+  role         Role         @default(STAFF)
+  isActive     Boolean      @default(true)
+  avatarUrl    String?
+  phone        String?
+  jobTitle     String?
+
+  // Google Workspace fields
+  googleId              String?  @unique  // sub claim from Google token
+  googleDomain          String?           // e.g. "seneca.uz"
+  googleCalendarId      String?           // primary calendar ID (usually email)
+  googleAccessToken     String?           // stored encrypted, refreshed automatically
+  googleRefreshToken    String?
+  googleTokenExpiry     DateTime?
+
+  // Telegram
+  telegramChatId    String?  @unique
+  telegramUsername  String?
+  isTelegramLinked  Boolean  @default(false)
+
+  // Notification preferences
+  notifyByEmail     Boolean  @default(true)
+  notifyByTelegram  Boolean  @default(false)
+
+  lastLoginAt DateTime?
+  lastDirectorySyncAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  assignedTasks   Task[]          @relation("TaskAssignee")
+  createdTasks    Task[]          @relation("TaskCreator")
+  comments        TaskComment[]
+  notifications   Notification[]
+  notificationLogs NotificationLog[]
+  activityLogs    ActivityLog[]
+  passwordResets      PasswordReset[]
+  emailVerifications  EmailVerification[]
+  timeEntries         TimeEntry[]     @relation("TimeEntries")
+  uploadedAttachments TaskAttachment[] @relation("AttachmentUploader")
+
+  @@index([googleId])
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model TaskTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tasks Task[]
+
+  @@map("task_templates")
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  title       String
+  customTitle String?
+  description String?
+  status      TaskStatus @default(TODO)
+  priority    Priority   @default(MEDIUM)
+  repeatType  RepeatType @default(NONE)
+  dueDate     DateTime?
+  startDate   DateTime?
+  reminderAt  DateTime?
+  completedAt DateTime?
+  notes       String?
+  isArchived  Boolean    @default(false)
+  isOverdue   Boolean    @default(false)
+  tags             String[]   @default([])
+  estimatedMinutes Int?
+  coAssigneeIds    String[]   @default([])
+
+  // Notification settings
+  notifyEmail        Boolean @default(true)
+  notifyTelegram     Boolean @default(false)
+  notifyEmailAddress String?
+  emailRecipients    String[] @default([])
+
+  // Google Calendar integration
+  createCalendarEvent    Boolean            @default(false)
+  googleCalendarEventId  String?            // Google Calendar event ID
+  googleCalendarId       String?            // which calendar the event lives in
+  googleCalendarHtmlLink String?
+  calendarSyncStatus     CalendarSyncStatus @default(NONE)
+  calendarSyncError      String?
+  calendarLastSyncedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  templateId   String?
+  template     TaskTemplate? @relation(fields: [templateId], references: [id])
+
+  assigneeId   String?
+  assignee     User?   @relation("TaskAssignee", fields: [assigneeId], references: [id])
+
+  creatorId    String
+  creator      User    @relation("TaskCreator", fields: [creatorId], references: [id])
+
+  departmentId String?
+  department   Department? @relation(fields: [departmentId], references: [id])
+
+  parentTaskId String?
+  parentTask   Task?   @relation("RecurringTasks", fields: [parentTaskId], references: [id])
+  childTasks   Task[]  @relation("RecurringTasks")
+
+  comments         TaskComment[]
+  attachments      TaskAttachment[]
+  notifications    Notification[]
+  activityLogs     ActivityLog[]
+  notificationLogs NotificationLog[]
+  subTasks         SubTask[]
+  timeEntries      TimeEntry[]
+  dependencies         TaskDependency[]       @relation("DependencyTask")
+  blockedBy            TaskDependency[]       @relation("DependencyBlocker")
+  telegramGroupMessages TelegramGroupMessage[]
+
+  @@index([assigneeId])
+  @@index([creatorId])
+  @@index([departmentId])
+  @@index([status])
+  @@index([dueDate])
+  @@index([isOverdue])
+  @@index([calendarSyncStatus])
+  @@index([createdAt])
+  @@index([isArchived, createdAt])
+  @@map("tasks")
+}
+
+model TaskComment {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taskId   String
+  task     Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  authorId String
+  author   User   @relation(fields: [authorId], references: [id])
+
+  @@index([taskId])
+  @@map("task_comments")
+}
+
+model TaskAttachment {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  googleDriveFileId String?
+  googleDriveUrl    String?
+  createdAt    DateTime @default(now())
+
+  taskId     String
+  task       Task    @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  uploaderId String?
+  uploader   User?   @relation("AttachmentUploader", fields: [uploaderId], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@map("task_attachments")
+}
+
+model SubTask {
+  id        String   @id @default(cuid())
+  title     String
+  isDone    Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@map("sub_tasks")
+}
+
+model TimeEntry {
+  id        String   @id @default(cuid())
+  minutes   Int
+  note      String?
+  date      DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  taskId String
+  task   Task   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation("TimeEntries", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([taskId])
+  @@index([userId])
+  @@map("time_entries")
+}
+
+model TaskDependency {
+  id          String @id @default(cuid())
+  taskId      String
+  task        Task   @relation("DependencyTask", fields: [taskId], references: [id], onDelete: Cascade)
+  dependsOnId String
+  dependsOn   Task   @relation("DependencyBlocker", fields: [dependsOnId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, dependsOnId])
+  @@index([taskId])
+  @@index([dependsOnId])
+  @@map("task_dependencies")
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  title     String
+  message   String
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([userId, isRead])
+  @@index([taskId])
+  @@map("notifications")
+}
+
+model NotificationLog {
+  id                String              @id @default(cuid())
+  channel           NotificationChannel
+  provider          NotificationProvider @default(IN_APP)
+  type              NotificationType
+  status            NotificationStatus  @default(PENDING)
+  recipient         String
+  subject           String?
+  body              String
+  providerMessageId String?             // Gmail message ID, Telegram message ID, etc.
+  errorMessage      String?
+  sentAt            DateTime?
+  createdAt         DateTime            @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: SetNull)
+
+  @@index([taskId])
+  @@index([userId])
+  @@index([channel, status])
+  @@map("notification_logs")
+}
+
+model ActivityLog {
+  id        String   @id @default(cuid())
+  action    String
+  field     String?
+  oldValue  String?
+  newValue  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id])
+
+  taskId String?
+  task   Task?   @relation(fields: [taskId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([taskId])
+  @@index([action])
+  @@map("activity_logs")
+}
+
+model PasswordReset {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("password_resets")
+}
+
+model EmailVerification {
+  id        String    @id @default(cuid())
+  token     String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([token])
+  @@map("email_verifications")
+}
+
+model AppSetting {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     String
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
+// Tracks Telegram group messages so replies can be linked back to tasks
+model TelegramGroupMessage {
+  id        String   @id @default(cuid())
+  messageId Int      @unique
+  chatId    String
+  taskId    String
+  task      Task     @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@index([taskId])
+  @@map("telegram_group_messages")
+}

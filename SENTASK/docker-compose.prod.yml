@@ -1,0 +1,76 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sentask}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - sentask_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-sentask}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sentask:latest
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-sentask}
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      APP_URL: ${APP_URL}
+      APP_NAME: ${APP_NAME:-SENTASK}
+      COMPANY_NAME: ${COMPANY_NAME:-Seneca}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-false}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-SENTASK <noreply@seneca.uz>}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_WORKSPACE_ALLOWED_DOMAINS: ${GOOGLE_WORKSPACE_ALLOWED_DOMAINS:-seneca.uz}
+      GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL: ${GOOGLE_SERVICE_ACCOUNT_CLIENT_EMAIL:-}
+      GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: ${GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:-}
+      GOOGLE_WORKSPACE_DELEGATED_ADMIN_EMAIL: ${GOOGLE_WORKSPACE_DELEGATED_ADMIN_EMAIL:-}
+      GOOGLE_WORKSPACE_CALENDAR_IMPERSONATION_EMAIL: ${GOOGLE_WORKSPACE_CALENDAR_IMPERSONATION_EMAIL:-}
+      GOOGLE_WORKSPACE_DEFAULT_SENDER_EMAIL: ${GOOGLE_WORKSPACE_DEFAULT_SENDER_EMAIL:-seneca.uz}
+      CRON_SECRET: ${CRON_SECRET}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_GROUP_CHAT_ID: ${TELEGRAM_GROUP_CHAT_ID:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      MASTER_ACCOUNT_EMAILS: ${MASTER_ACCOUNT_EMAILS:-}
+    volumes:
+      - sentask_uploads:/app/public/uploads
+    # No ports exposed — Caddy handles all traffic
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - app
+
+volumes:
+  sentask_postgres_data:
+  sentask_uploads:
+  caddy_data:
+  caddy_config:
