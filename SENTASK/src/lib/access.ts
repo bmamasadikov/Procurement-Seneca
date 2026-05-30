@@ -33,6 +33,7 @@ export function hasFullTaskAccess(user?: AccessUser | null) {
   if (!user) return false;
 
   return (
+    user.role === "ADMIN" ||
     Boolean(user.isMasterAccount) ||
     isMasterAccountEmail(user.email) ||
     isMasterAccountEmail(user.googleEmail)
