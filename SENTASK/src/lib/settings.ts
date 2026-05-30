@@ -83,7 +83,7 @@ export const GOOGLE_WORKSPACE_DEFAULTS: GoogleWorkspaceSettingsRecord = {
   defaultCalendarId: DEFAULT_SHARED_CALENDAR_ID,
   calendarCompletionBehavior: "MARK_DONE",
   reminderMinutesBefore: 30,
-  gmailSendingMode: "GMAIL_API",
+  gmailSendingMode: "SMTP",
   defaultSenderEmail: process.env.GOOGLE_WORKSPACE_DEFAULT_SENDER_EMAIL || "noreply@seneca.uz",
   directorySyncEnabled: true,
   driveAttachmentsEnabled: false,

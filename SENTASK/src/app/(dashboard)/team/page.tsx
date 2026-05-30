@@ -369,12 +369,15 @@ function UserModal({
         body: JSON.stringify(body),
       });
 
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.error || "Failed");
-      }
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed");
 
-      toast.success(isEdit ? "User updated" : "User created");
+      if (data.emailWarning) {
+        toast.success("Member added");
+        toast.error(data.emailWarning, { duration: 8000 });
+      } else {
+        toast.success(isEdit ? "User updated" : "Invite sent — member added as Inactive");
+      }
       onSuccess();
     } catch (err: any) {
       toast.error(err.message || "Something went wrong");

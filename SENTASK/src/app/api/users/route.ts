@@ -96,17 +96,21 @@ export async function POST(req: NextRequest) {
 
   const activateUrl = `${process.env.APP_URL}/reset-password?token=${token}`;
 
+  let emailError: string | null = null;
   try {
     const inviterName = session.user.name || "A Seneca admin";
     await sendInviteEmail({ to: email, name, invitedBy: inviterName, activateUrl });
   } catch (err) {
     console.error("Invite email failed:", err);
-    // Don't fail the request — user is created, admin can resend manually
+    emailError = err instanceof Error ? err.message : "Email delivery failed";
   }
 
   await prisma.activityLog.create({
     data: { action: "user.invited", userId: session.user.id, details: { email, role } },
   });
 
-  return NextResponse.json(user, { status: 201 });
+  return NextResponse.json(
+    { ...user, ...(emailError ? { emailWarning: `Member created but invite email failed: ${emailError}` } : {}) },
+    { status: 201 }
+  );
 }
