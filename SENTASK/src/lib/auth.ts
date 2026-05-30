@@ -269,46 +269,67 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return true;
     },
     async jwt({ token, user, account }) {
+      const tok = token as typeof token & {
+        id?: string;
+        googleEmail?: string | null;
+        role?: Role;
+        isMasterAccount?: boolean;
+        authProvider?: "CREDENTIALS" | "GOOGLE";
+        departmentId?: string | null;
+        avatarUrl?: string | null;
+        jobTitle?: string | null;
+      };
+
       if (user && account?.provider === "credentials") {
-        token.id = user.id;
-        token.googleEmail = user.googleEmail;
-        token.role = user.role;
-        token.isMasterAccount = user.isMasterAccount;
-        token.authProvider = user.authProvider;
-        token.departmentId = user.departmentId;
-        token.avatarUrl = user.avatarUrl;
-        token.jobTitle = user.jobTitle;
+        tok.id = user.id;
+        tok.googleEmail = user.googleEmail;
+        tok.role = user.role;
+        tok.isMasterAccount = user.isMasterAccount;
+        tok.authProvider = user.authProvider;
+        tok.departmentId = user.departmentId;
+        tok.avatarUrl = user.avatarUrl;
+        tok.jobTitle = user.jobTitle;
       }
 
-      if ((account?.provider === "google" || (!token.id && token.email)) && token.email) {
-        const dbUser = await getWorkspaceUserByEmail(token.email.toLowerCase() as string);
+      if ((account?.provider === "google" || (!tok.id && tok.email)) && tok.email) {
+        const dbUser = await getWorkspaceUserByEmail(tok.email.toLowerCase() as string);
         if (dbUser && dbUser.isActive) {
           const sessionUser = toSessionUser(dbUser);
-          token.id = sessionUser.id;
-          token.googleEmail = sessionUser.googleEmail;
-          token.role = sessionUser.role;
-          token.isMasterAccount = sessionUser.isMasterAccount;
-          token.authProvider = sessionUser.authProvider;
-          token.departmentId = sessionUser.departmentId;
-          token.avatarUrl = sessionUser.avatarUrl;
-          token.jobTitle = sessionUser.jobTitle;
-          token.name = sessionUser.name;
-          token.email = sessionUser.email;
+          tok.id = sessionUser.id;
+          tok.googleEmail = sessionUser.googleEmail;
+          tok.role = sessionUser.role;
+          tok.isMasterAccount = sessionUser.isMasterAccount;
+          tok.authProvider = sessionUser.authProvider;
+          tok.departmentId = sessionUser.departmentId;
+          tok.avatarUrl = sessionUser.avatarUrl;
+          tok.jobTitle = sessionUser.jobTitle;
+          tok.name = sessionUser.name;
+          tok.email = sessionUser.email;
         }
       }
 
-      return token;
+      return tok;
     },
     async session({ session, token }) {
       if (token) {
-        session.user.id = token.id as string;
-        session.user.googleEmail = token.googleEmail as string | undefined;
-        session.user.role = token.role as Role;
-        session.user.isMasterAccount = Boolean(token.isMasterAccount);
-        session.user.authProvider = token.authProvider as "CREDENTIALS" | "GOOGLE" | undefined;
-        session.user.departmentId = token.departmentId as string;
-        session.user.avatarUrl = token.avatarUrl as string;
-        session.user.jobTitle = token.jobTitle as string;
+        const tok = token as typeof token & {
+          id?: string;
+          googleEmail?: string | null;
+          role?: Role;
+          isMasterAccount?: boolean;
+          authProvider?: "CREDENTIALS" | "GOOGLE";
+          departmentId?: string | null;
+          avatarUrl?: string | null;
+          jobTitle?: string | null;
+        };
+        session.user.id = tok.id as string;
+        session.user.googleEmail = tok.googleEmail as string | undefined;
+        session.user.role = tok.role as Role;
+        session.user.isMasterAccount = Boolean(tok.isMasterAccount);
+        session.user.authProvider = tok.authProvider as "CREDENTIALS" | "GOOGLE" | undefined;
+        session.user.departmentId = tok.departmentId as string;
+        session.user.avatarUrl = tok.avatarUrl as string;
+        session.user.jobTitle = tok.jobTitle as string;
       }
       return session;
     },
@@ -346,15 +367,3 @@ declare module "next-auth" {
   }
 }
 
-declare module "@auth/core/jwt" {
-  interface JWT {
-    id?: string;
-    googleEmail?: string | null;
-    role?: Role;
-    isMasterAccount?: boolean;
-    authProvider?: "CREDENTIALS" | "GOOGLE";
-    departmentId?: string | null;
-    avatarUrl?: string | null;
-    jobTitle?: string | null;
-  }
-}
