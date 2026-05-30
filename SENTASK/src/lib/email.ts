@@ -149,6 +149,34 @@ export async function sendTaskAssignedEmail(params: {
   });
 }
 
+export async function sendInviteEmail(params: {
+  to: string;
+  name: string;
+  invitedBy: string;
+  activateUrl: string;
+}) {
+  const { to, name, invitedBy, activateUrl } = params;
+
+  const content = `
+    <h2 style="margin:0 0 8px;color:#111827;font-size:20px;">You've been invited to SENTASK</h2>
+    <p style="color:#6b7280;margin:0 0 24px;font-size:15px;">Hi <strong>${name}</strong>, <strong>${invitedBy}</strong> has added you to the ${COMPANY} team on SENTASK.</p>
+    <p style="color:#6b7280;margin:0 0 24px;font-size:15px;">Click the button below to set your password and activate your account.</p>
+    <div style="text-align:center;margin:24px 0;">
+      <a href="${activateUrl}" style="background:${BRAND_COLOR};color:#fff;text-decoration:none;padding:12px 28px;border-radius:8px;font-weight:600;font-size:15px;display:inline-block;">
+        Activate My Account
+      </a>
+    </div>
+    <p style="color:#9ca3af;font-size:13px;text-align:center;">This invitation link expires in 7 days. If you didn't expect this, you can safely ignore this email.</p>
+  `;
+
+  await sendWorkspaceEmail({
+    from: process.env.SMTP_FROM || `SENTASK <noreply@seneca.uz>`,
+    to,
+    subject: `[SENTASK] You've been invited to join ${COMPANY}`,
+    html: emailTemplate(content),
+  });
+}
+
 export async function sendPasswordResetEmail(params: {
   to: string;
   name: string;

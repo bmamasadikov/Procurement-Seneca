@@ -358,7 +358,7 @@ function UserModal({
     setLoading(true);
     try {
       const body: any = { name, email, role, departmentId: departmentId || null, jobTitle };
-      if (!isEdit || password) body.password = password;
+      if (isEdit && password) body.password = password;
 
       const url = isEdit ? `/api/users/${user!.id}` : "/api/users";
       const method = isEdit ? "PATCH" : "POST";
@@ -419,16 +419,22 @@ function UserModal({
             />
           </div>
 
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Password {isEdit ? "(leave blank to keep current)" : "*"}
-            </label>
-            <input
-              type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-              required={!isEdit} minLength={6}
-              className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          {isEdit ? (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1">
+                Password (leave blank to keep current)
+              </label>
+              <input
+                type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                minLength={6}
+                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+          ) : (
+            <div className="bg-blue-50 border border-blue-100 rounded-lg px-3 py-2.5 text-xs text-blue-700">
+              An invitation email will be sent to the member to set their own password and activate their account.
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -463,7 +469,7 @@ function UserModal({
               className="flex-1 flex items-center justify-center gap-2 bg-[#1e3a8a] hover:bg-[#1e40af] text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isEdit ? "Save Changes" : "Add Member"}
+              {isEdit ? "Save Changes" : "Add & Send Invite"}
             </button>
             <button
               type="button" onClick={onClose}

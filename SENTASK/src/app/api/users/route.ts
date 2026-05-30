@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import bcrypt from "bcryptjs";
+import { sendInviteEmail } from "@/lib/email";
+import { randomBytes } from "crypto";
 import { z } from "zod";
 
 const createUserSchema = z.object({
   name: z.string().min(1).max(100),
   email: z.string().email(),
-  password: z.string().min(6),
   role: z.enum(["ADMIN", "MANAGER", "STAFF", "PENDING"]).default("STAFF"),
   departmentId: z.string().optional().nullable(),
   jobTitle: z.string().optional(),
@@ -62,23 +62,50 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Validation failed", details: parsed.error.flatten() }, { status: 422 });
   }
 
-  const { name, email, password, role, departmentId, jobTitle, phone } = parsed.data;
+  const { name, email, role, departmentId, jobTitle, phone } = parsed.data;
 
   const exists = await prisma.user.findUnique({ where: { email } });
   if (exists) return NextResponse.json({ error: "Email already in use" }, { status: 409 });
 
-  const passwordHash = await bcrypt.hash(password, 12);
-
+  // Create user as inactive — they activate via the invite email
   const user = await prisma.user.create({
-    data: { name, email, passwordHash, role, departmentId: departmentId || null, jobTitle, phone },
+    data: {
+      name,
+      email,
+      role,
+      departmentId: departmentId || null,
+      jobTitle,
+      phone,
+      isActive: false,
+    },
     select: {
       id: true, name: true, email: true, googleEmail: true, role: true, authProvider: true, isActive: true,
       jobTitle: true, phone: true, departmentId: true, department: true, createdAt: true,
     },
   });
 
+  // Generate a 7-day invite token (reuses the PasswordReset table)
+  const token = randomBytes(32).toString("hex");
+  await prisma.passwordReset.create({
+    data: {
+      token,
+      userId: user.id,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    },
+  });
+
+  const activateUrl = `${process.env.APP_URL}/reset-password?token=${token}`;
+
+  try {
+    const inviterName = session.user.name || "A Seneca admin";
+    await sendInviteEmail({ to: email, name, invitedBy: inviterName, activateUrl });
+  } catch (err) {
+    console.error("Invite email failed:", err);
+    // Don't fail the request — user is created, admin can resend manually
+  }
+
   await prisma.activityLog.create({
-    data: { action: "user.created", userId: session.user.id, details: { email, role } },
+    data: { action: "user.invited", userId: session.user.id, details: { email, role } },
   });
 
   return NextResponse.json(user, { status: 201 });
