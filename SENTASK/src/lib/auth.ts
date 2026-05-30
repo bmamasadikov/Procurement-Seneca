@@ -184,30 +184,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          console.error("[auth] missing credentials");
-          return null;
-        }
+        if (!credentials?.email || !credentials?.password) return null;
 
         const email = String(credentials.email).trim().toLowerCase();
         const user = await getWorkspaceUserByEmail(email);
-        console.log(`[auth] lookup ${email}: found=${!!user} active=${user?.isActive} role=${user?.role} hasHash=${!!user?.passwordHash}`);
         if (!user || !user.isActive || user.role === "PENDING" || !user.passwordHash) return null;
 
         const isValid = await bcrypt.compare(
           credentials.password as string,
           user.passwordHash
         );
-        console.log(`[auth] bcrypt compare result: ${isValid}`);
 
         if (!isValid) return null;
 
         const sessionUser = toSessionUser(user);
-        try {
-          await recordSuccessfulLogin(sessionUser);
-        } catch (e) {
-          console.error("[auth] recordSuccessfulLogin failed:", e);
-        }
+        await recordSuccessfulLogin(sessionUser);
         return sessionUser;
       },
     }),
