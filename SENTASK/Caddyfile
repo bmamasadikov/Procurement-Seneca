@@ -2,7 +2,7 @@
 	email {$ACME_EMAIL}
 }
 
-sentask.seneca.uz {
+{$DOMAIN} {
 	encode zstd gzip
 	reverse_proxy app:3000
 
