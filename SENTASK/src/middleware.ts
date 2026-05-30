@@ -1,16 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
+import { NextResponse } from "next/server";
 
-export default async function middleware(req: NextRequest) {
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
-  });
-  const isLoggedIn = Boolean(token);
+export default auth((req) => {
+  const session = req.auth;
+  const isLoggedIn = Boolean(session);
   const { pathname } = req.nextUrl;
-  const role = typeof token?.role === "string" ? token.role : undefined;
-  const publicApiPaths = ["/api/forgot-password", "/api/reset-password", "/api/register", "/api/verify-email"];
+  const role = session?.user?.role;
 
+  const publicApiPaths = ["/api/forgot-password", "/api/reset-password", "/api/register", "/api/verify-email"];
   const publicPaths = ["/login", "/forgot-password", "/reset-password", "/pending-approval", "/register", "/verify-email"];
   const isPublic = publicPaths.some((p) => pathname.startsWith(p));
   const isPublicApi = publicApiPaths.some((p) => pathname.startsWith(p));
@@ -18,12 +15,9 @@ export default async function middleware(req: NextRequest) {
 
   if (!isLoggedIn && !isPublic && !pathname.startsWith("/api/auth")) {
     if (pathname.startsWith("/api/")) {
-      if (isPublicApi) {
-        return NextResponse.next();
-      }
+      if (isPublicApi) return NextResponse.next();
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-
     const redirectUrl = new URL("/login", req.url);
     redirectUrl.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(redirectUrl);
@@ -36,7 +30,6 @@ export default async function middleware(req: NextRequest) {
         headers: { "content-type": "application/json" },
       });
     }
-
     if (!pathname.startsWith("/pending-approval") && !pathname.startsWith("/api/auth")) {
       return NextResponse.redirect(new URL("/pending-approval", req.url));
     }
@@ -53,7 +46,7 @@ export default async function middleware(req: NextRequest) {
   }
 
   return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: ["/((?!_next/static|_next/image|favicon.ico|public).*)"],
