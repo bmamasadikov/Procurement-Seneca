@@ -7,7 +7,7 @@ import toast from "react-hot-toast";
 import { User, Department } from "@/types";
 import { getInitials } from "@/lib/utils";
 import {
-  Plus, Search, UserCheck, UserX, Edit2, X, Loader2, Users, ShieldAlert
+  Plus, Search, UserCheck, UserX, Edit2, X, Loader2, Users, ShieldAlert, Trash2
 } from "lucide-react";
 
 export default function TeamPage() {
@@ -16,6 +16,7 @@ export default function TeamPage() {
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const queryClient = useQueryClient();
 
   const { data: users = [], isLoading } = useQuery<User[]>({
@@ -59,6 +60,22 @@ export default function TeamPage() {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       toast.success("User approved as Staff");
     },
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/users/${id}`, { method: "DELETE" });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Failed to delete");
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["users"] });
+      setDeletingUser(null);
+      toast.success("Member deleted");
+    },
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const rejectUser = useMutation({
@@ -211,19 +228,28 @@ export default function TeamPage() {
                   <div className="flex items-center gap-1 flex-shrink-0">
                     <button
                       onClick={() => { setEditingUser(user); setShowModal(true); }}
+                      title="Edit member"
                       className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
                     <button
                       onClick={() => toggleActive.mutate({ id: user.id, isActive: !user.isActive })}
+                      title={user.isActive ? "Mark inactive" : "Mark active"}
                       className={`p-1.5 rounded-lg transition-colors ${
                         user.isActive
-                          ? "text-gray-400 hover:text-red-600 hover:bg-red-50"
+                          ? "text-gray-400 hover:text-amber-600 hover:bg-amber-50"
                           : "text-gray-400 hover:text-green-600 hover:bg-green-50"
                       }`}
                     >
                       {user.isActive ? <UserX className="w-3.5 h-3.5" /> : <UserCheck className="w-3.5 h-3.5" />}
+                    </button>
+                    <button
+                      onClick={() => setDeletingUser(user)}
+                      title="Delete member"
+                      className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 )}
@@ -263,6 +289,44 @@ export default function TeamPage() {
             queryClient.invalidateQueries({ queryKey: ["users"] });
           }}
         />
+      )}
+
+      {/* Delete confirmation */}
+      {deletingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm p-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center flex-shrink-0">
+                <Trash2 className="w-5 h-5 text-red-600" />
+              </div>
+              <div>
+                <h3 className="font-semibold text-gray-900">Delete Member</h3>
+                <p className="text-sm text-gray-500">This action cannot be undone</p>
+              </div>
+            </div>
+            <p className="text-sm text-gray-600 mb-6">
+              Are you sure you want to permanently delete{" "}
+              <span className="font-semibold text-gray-900">{deletingUser.name}</span>?
+              Their tasks will be unassigned and reassigned to you as creator.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => deleteUser.mutate(deletingUser.id)}
+                disabled={deleteUser.isPending}
+                className="flex-1 flex items-center justify-center gap-2 bg-red-600 hover:bg-red-700 text-white font-semibold py-2.5 rounded-lg transition-colors disabled:opacity-60"
+              >
+                {deleteUser.isPending && <Loader2 className="w-4 h-4 animate-spin" />}
+                Delete
+              </button>
+              <button
+                onClick={() => setDeletingUser(null)}
+                className="flex-1 py-2.5 text-sm text-gray-600 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

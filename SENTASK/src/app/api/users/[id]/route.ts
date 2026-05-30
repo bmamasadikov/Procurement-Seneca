@@ -69,10 +69,22 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   }
 
   if (session.user.id === params.id) {
-    return NextResponse.json({ error: "Cannot deactivate yourself" }, { status: 400 });
+    return NextResponse.json({ error: "Cannot delete yourself" }, { status: 400 });
   }
 
-  await prisma.user.update({ where: { id: params.id }, data: { isActive: false } });
+  // Reassign tasks created by this user to the deleting admin (creatorId is required)
+  await prisma.task.updateMany({
+    where: { creatorId: params.id },
+    data: { creatorId: session.user.id },
+  });
+
+  // Unassign tasks assigned to this user
+  await prisma.task.updateMany({
+    where: { assigneeId: params.id },
+    data: { assigneeId: null },
+  });
+
+  await prisma.user.delete({ where: { id: params.id } });
 
   return NextResponse.json({ success: true });
 }
