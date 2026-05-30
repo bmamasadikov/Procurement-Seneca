@@ -45,6 +45,16 @@ export default auth((req) => {
     );
   }
 
+  // Settings page and settings API are ADMIN-only
+  if (isLoggedIn && !isPendingUser && role !== "ADMIN") {
+    if (pathname.startsWith("/settings")) {
+      return NextResponse.redirect(new URL("/dashboard", req.url));
+    }
+    if (pathname.startsWith("/api/settings/")) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+  }
+
   return NextResponse.next();
 });
 
