@@ -29,6 +29,7 @@ const navItems = [
   { href: "/reports", label: "Reports", icon: BarChart3, requiresMasterAccess: true },
   { href: "/team", label: "Team", icon: Users, roles: ["ADMIN", "MANAGER"] },
   { href: "/settings", label: "Settings", icon: Settings, roles: ["ADMIN"] },
+  { href: "/profile", label: "My Profile", icon: User2, excludeRoles: ["ADMIN"] },
 ];
 
 interface SidebarProps {
@@ -45,6 +46,7 @@ export function Sidebar({ onClose }: SidebarProps) {
   const visibleItems = navItems.filter((item) => {
     if (role === "PENDING") return false;
     if (item.requiresMasterAccess) return canViewReports;
+    if ((item as any).excludeRoles?.includes(role)) return false;
     return !item.roles || item.roles.includes(role || "");
   });
 
