@@ -7,7 +7,7 @@
 ## 2) Prepare VPS
 - Ubuntu 22.04+ recommended.
 - Install Docker + Compose plugin.
-- Open ports `80` and `443` in firewall/security group.
+- Open ports `80` and `443` (TCP) and `443` (UDP) in firewall/security group.
 
 ## 3) Prepare environment file
 - Copy `.env.public.example` to `.env.public`.
@@ -47,3 +47,15 @@ docker compose -f docker-compose.public.yml --env-file .env.public logs -f caddy
 SETUP_LINK_BASE_URL="https://<your-domain>" \
 node scripts/generate-password-setup-links.js <email1> <email2>
 ```
+
+## 8) Notes
+- File uploads are persisted in Docker volume `sentask_uploads`.
+- `Caddyfile` uses `DOMAIN` from `.env.public`, so domain is not hardcoded.
+
+## 9) Railway build failure fix (next@14.2.18 CVEs)
+- Ensure your pushed commit includes:
+  - `package.json` with `next: ^14.2.35`
+  - updated `package-lock.json` resolving `node_modules/next` to `14.2.35`
+- In Railway service settings:
+  - set Root Directory to `SENTASK` (if this repo has multiple projects)
+  - clear build cache and redeploy latest commit

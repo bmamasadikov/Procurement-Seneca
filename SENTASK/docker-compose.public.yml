@@ -19,6 +19,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    image: sentask:latest
     restart: unless-stopped
     depends_on:
       postgres:
@@ -37,7 +38,7 @@ services:
       SMTP_SECURE: ${SMTP_SECURE:-false}
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
-      SMTP_FROM: ${SMTP_FROM:-SENTASK <noreply@example.com>}
+      SMTP_FROM: ${SMTP_FROM:-SENTASK <noreply@seneca.uz>}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       GOOGLE_WORKSPACE_ALLOWED_DOMAINS: ${GOOGLE_WORKSPACE_ALLOWED_DOMAINS:-seneca.uz}
@@ -45,8 +46,15 @@ services:
       GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY: ${GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:-}
       GOOGLE_WORKSPACE_DELEGATED_ADMIN_EMAIL: ${GOOGLE_WORKSPACE_DELEGATED_ADMIN_EMAIL:-}
       GOOGLE_WORKSPACE_CALENDAR_IMPERSONATION_EMAIL: ${GOOGLE_WORKSPACE_CALENDAR_IMPERSONATION_EMAIL:-}
-      GOOGLE_WORKSPACE_DEFAULT_SENDER_EMAIL: ${GOOGLE_WORKSPACE_DEFAULT_SENDER_EMAIL:-}
-      CRON_SECRET: ${CRON_SECRET:-}
+      GOOGLE_WORKSPACE_DEFAULT_SENDER_EMAIL: ${GOOGLE_WORKSPACE_DEFAULT_SENDER_EMAIL:-noreply@seneca.uz}
+      GOOGLE_WORKSPACE_DEFAULT_CALENDAR_ID: ${GOOGLE_WORKSPACE_DEFAULT_CALENDAR_ID:-}
+      CRON_SECRET: ${CRON_SECRET:?set CRON_SECRET in .env.public}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_GROUP_CHAT_ID: ${TELEGRAM_GROUP_CHAT_ID:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      MASTER_ACCOUNT_EMAILS: ${MASTER_ACCOUNT_EMAILS:-}
+    volumes:
+      - sentask_uploads:/app/public/uploads
 
   caddy:
     image: caddy:2-alpine
@@ -59,6 +67,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
+      - "443:443/udp"
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy_data:/data
@@ -66,5 +75,6 @@ services:
 
 volumes:
   sentask_postgres_data:
+  sentask_uploads:
   caddy_data:
   caddy_config:

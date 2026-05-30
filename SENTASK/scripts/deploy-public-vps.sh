@@ -26,6 +26,7 @@ rsync -az --delete \
   --exclude "node_modules" \
   --exclude ".next" \
   --exclude ".tmp-seed" \
+  --exclude "public/uploads" \
   --exclude ".env" \
   --exclude ".env.public" \
   "$ROOT_DIR/" "$SSH_TARGET:$REMOTE_DIR/"
@@ -35,6 +36,7 @@ scp "$ENV_FILE" "$SSH_TARGET:$REMOTE_DIR/.env.public"
 ssh "$SSH_TARGET" "
   set -euo pipefail
   cd '$REMOTE_DIR'
+  docker compose version >/dev/null
   docker compose -f docker-compose.public.yml --env-file .env.public up -d --build
   docker compose -f docker-compose.public.yml --env-file .env.public ps
 "
